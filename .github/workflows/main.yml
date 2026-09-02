@@ -20,28 +20,39 @@ jobs:
         run: npm ci
       - name: Test Code
         run: npm run test
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-files
-          path: |
-           dist
-           package.json
-  deploy:
+  Build:
     needs: test
     runs-on: ubuntu-latest
+    outputs:
+      script-file: ${{ steps.publish.outputs.script-file }}
     steps:
       - name: Get code
         uses: actions/checkout@v4
       - name: Install dependencies
         run: npm ci
-      - name: Build code
+      - name: Build website
         run: npm run build
+      - name: Publish JS filename
+        id: publish
+        run: find dist/assets/*.js -type f -execidr echo 'script-file={}' >> $GUTHUB_OUTPUT ';'
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files
+          path: |
+            dist
+            package.json
+  deploy:
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
       - name: Get build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist-files   
       - name: Output contents
-        run: ls       
+        run: ls   
+      - name: output filename
+        run: echo "${{ needs.Build.outputs}}"    
       - name: Deploy code
         run: echo "deploying ..."
