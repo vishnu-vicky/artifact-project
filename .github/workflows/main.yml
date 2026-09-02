@@ -1,40 +1,59 @@
-name: deploymet exercise 2
+name: deployment exercise 2
+
 on: push
+
 jobs:
+
   lint:
     runs-on: ubuntu-latest
+
     steps:
       - name: Get code
         uses: actions/checkout@v4
+
       - name: Install dependencies
         run: npm ci
+
       - name: Lint
         run: npm run lint
+
   test:
     needs: lint
     runs-on: ubuntu-latest
+
     steps:
       - name: Get code
         uses: actions/checkout@v4
+
       - name: Install dependencies
         run: npm ci
+
       - name: Test Code
         run: npm run test
-  Build:
+
+  build:
     needs: test
     runs-on: ubuntu-latest
+
     outputs:
       script-file: ${{ steps.publish.outputs.script-file }}
+
     steps:
       - name: Get code
         uses: actions/checkout@v4
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build website
         run: npm run build
+
       - name: Publish JS filename
         id: publish
-        run: find dist/assets/*.js -type f -execidr echo 'script-file={}' >> $GITHUB_OUTPUT ';'
+        run: |
+          script_file=$(find dist/assets -type f -name "*.js" | head -n 1)
+          echo "script-file=$script_file" >> "$GITHUB_OUTPUT"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -42,17 +61,22 @@ jobs:
           path: |
             dist
             package.json
+
   deploy:
-    needs: Build
+    needs: build
     runs-on: ubuntu-latest
+
     steps:
       - name: Get build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dist-files   
+          name: dist-files
+
       - name: Output contents
-        run: ls   
-      - name: output filename
-        run: echo "${{ needs.Build.outputs}}"    
+        run: ls -R
+
+      - name: Output filename
+        run: echo "${{ needs.build.outputs.script-file }}"
+
       - name: Deploy code
         run: echo "deploying ..."
